@@ -87,7 +87,7 @@ jobs:
         with:
           name: lincstation_leds-${{ matrix.fmt }}
           path: |
-            lincstation_leds*.deb
-            lincstation_leds*.rpm
-            lincstation_leds*.apk
+            lincstation-leds*.deb
+            lincstation-leds*.rpm
+            lincstation-leds*.apk
           if-no-files-found: ignore

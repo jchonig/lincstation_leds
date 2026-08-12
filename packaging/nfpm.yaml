@@ -8,7 +8,12 @@
 # `version:` is set from the VERSION environment variable (nfpm has no CLI
 # --version flag) -- see the Makefile's package-% target, which sets it
 # per-invocation from `git describe` or an explicit override.
-name: lincstation_leds
+# Package name uses a hyphen (not the project's usual underscore) because
+# Debian's reprepro tool enforces the Policy-mandated package-name charset
+# [a-z0-9][a-z0-9+.-]* -- underscore isn't in it. Everything else (the
+# binary path, systemd unit filename, user/group) keeps the project's
+# normal lincstation_leds spelling; only this Name field differs.
+name: lincstation-leds
 arch: amd64
 platform: linux
 version: ${VERSION}

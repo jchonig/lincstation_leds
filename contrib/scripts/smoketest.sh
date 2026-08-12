@@ -33,7 +33,7 @@ assert_binary_runs_and_exits() {
 
 case "$FMT" in
     deb)
-        pkg=$(ls ./lincstation_leds_*.deb | head -n1)
+        pkg=$(ls ./lincstation-leds_*.deb | head -n1)
         apt-get update -qq
         apt-get install -y -qq "$pkg"
         assert_user
@@ -41,24 +41,24 @@ case "$FMT" in
         if command -v systemctl >/dev/null 2>&1; then
             systemctl is-enabled lincstation_leds.service
         fi
-        apt-get remove -y -qq lincstation_leds
+        apt-get remove -y -qq lincstation-leds
         ;;
     rpm)
-        pkg=$(ls ./lincstation_leds-*.rpm | head -n1)
+        pkg=$(ls ./lincstation-leds-*.rpm | head -n1)
         dnf install -y -q "$pkg"
         assert_user
         assert_binary_runs_and_exits
         if command -v systemctl >/dev/null 2>&1; then
             systemctl is-enabled lincstation_leds.service
         fi
-        dnf remove -y -q lincstation_leds
+        dnf remove -y -q lincstation-leds
         ;;
     apk)
-        pkg=$(ls ./lincstation_leds_*.apk | head -n1)
+        pkg=$(ls ./lincstation-leds_*.apk | head -n1)
         apk add --allow-untrusted -q "$pkg"
         assert_user
         assert_binary_runs_and_exits
-        apk del -q lincstation_leds
+        apk del -q lincstation-leds
         ;;
     *)
         echo "unknown format: $FMT (expected deb, rpm, or apk)" >&2

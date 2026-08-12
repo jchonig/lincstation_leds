@@ -149,7 +149,11 @@ jobs:
           echo "$ALPINE_SIGNING_KEY" > ~/.abuild/lincstation_leds.rsa
           chmod 600 ~/.abuild/lincstation_leds.rsa
           openssl rsa -in ~/.abuild/lincstation_leds.rsa -pubout -out ~/.abuild/lincstation_leds.rsa.pub
-          apk index -o public/apk/x86_64/APKINDEX.tar.gz public/apk/x86_64/*.apk
+          # --allow-untrusted: apk-tools 3.x validates each input package's
+          # own signature even at index-build time. Our nfpm-built .apks
+          # aren't individually signed (only the index is, below) -- that's
+          # the standard v2 scheme, so this is expected, not a real problem.
+          apk index --allow-untrusted -o public/apk/x86_64/APKINDEX.tar.gz public/apk/x86_64/*.apk
           abuild-sign -k ~/.abuild/lincstation_leds.rsa public/apk/x86_64/APKINDEX.tar.gz
           cp ~/.abuild/lincstation_leds.rsa.pub public/apk/lincstation_leds.rsa.pub
       - uses: actions/upload-artifact@v4
