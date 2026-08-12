@@ -1,0 +1,33 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: lincstation_leds
+Label: lincstation_leds
+Suite: lincstation_leds
+Codename: stable
+Date: Wed, 12 Aug 2026 22:00:41 UTC
+Architectures: amd64
+Components: main
+MD5Sum:
+ 989159b6e2ee8c582bff5e2aa59de511 781 main/binary-amd64/Packages
+ ad29103e03ce7c8b247fc8df3a800b5b 545 main/binary-amd64/Packages.gz
+ 821c4efcf1428cbe0a511f7a2d3403a7 111 main/binary-amd64/Release
+SHA1:
+ dd1755faf153c4a04e92f2b14eda0f427b43582f 781 main/binary-amd64/Packages
+ c0612209d20a794861f554c930f9b9d29f707fdb 545 main/binary-amd64/Packages.gz
+ 3b246f9c4345572184a5cc91f795d759d87949c5 111 main/binary-amd64/Release
+SHA256:
+ 31e33a71481ac5758776464680f6d785f2e1d036d6d3f346bd0f85abaaccf8d1 781 main/binary-amd64/Packages
+ 4ddf9f0493803c77bd44a724759a1026979fef94da4c8b0582d89f1f0892f445 545 main/binary-amd64/Packages.gz
+ 5b0e45b57e7249cdb48acf080a672edb307ba047e33da82dc57638e3d9d7607f 111 main/binary-amd64/Release
+SHA512:
+ 802d54d408aa0e778e3462f3a123ee9778748e1ba457063ae1d1e2eaa27192fada2a60bf14c6859472087a89a755e710de018f840b8b8cf3462919fe4b0324da 781 main/binary-amd64/Packages
+ 200bd7ca9101aa762baa5c86ae6b9ed4914fb15a39e691479fe71215f39656fe7578eb767738700bfec52d69f2903d1ed67d5925de056f6cd66b1a4878067359 545 main/binary-amd64/Packages.gz
+ 37912cb227a71161ed1df81f9a4b82a875c2903319a9413360247120f16e80c8cb9440917dbd5197c3a136734f398ca37518bcb196ed2fde81ecd9d489e78d65 111 main/binary-amd64/Release
+-----BEGIN PGP SIGNATURE-----
+
+iHUEARYKAB0WIQSFwjVOyzSKbCrjnMhY5tkAaKbedgUCanztCQAKCRBY5tkAaKbe
+dnyiAQCpeoFpCzvUVvRHZwbngmWukXCQH2ogw3Kp9E9CmpjCRgEA2z+2C7wM2nLQ
++CuNMHtQ9qSr9Jy2mFZ6d9q+34GpLQg=
+=dK3d
+-----END PGP SIGNATURE-----
