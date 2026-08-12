@@ -1,0 +1,22 @@
+[Unit]
+Description=Lincstation N2 LED activity monitor
+Documentation=https://github.com/jchonig/lincstation_leds
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/lincstation_leds
+User=lincstation-leds
+Group=lincstation-leds
+Restart=on-failure
+RestartSec=5
+# Environment=LEDS_DEBUG=true
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+DeviceAllow=char-i2c rw
+
+[Install]
+WantedBy=multi-user.target

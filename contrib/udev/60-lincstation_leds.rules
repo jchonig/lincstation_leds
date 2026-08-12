@@ -1,0 +1,3 @@
+# Grant the lincstation-leds service group access to all i2c adapters.
+# The daemon probes /dev/i2c-0..19 at startup looking for its device.
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", GROUP="lincstation-leds", MODE="0660"

@@ -1,0 +1,110 @@
+# Packaging config for lincstation_leds, consumed by nfpm
+# (https://github.com/goreleaser/nfpm). Builds .deb, .rpm, and .apk from
+# this single file. Run from the repo root:
+#
+#   nfpm package --config packaging/nfpm.yaml --packager <deb|rpm|apk> \
+#       --target . --version "$VERSION"
+#
+# `version:` is set from the VERSION environment variable (nfpm has no CLI
+# --version flag) -- see the Makefile's package-% target, which sets it
+# per-invocation from `git describe` or an explicit override.
+name: lincstation_leds
+arch: amd64
+platform: linux
+version: ${VERSION}
+version_schema: none
+section: admin
+priority: optional
+maintainer: Jeffrey C Honig <jch@honig.net>
+description: |
+  Daemon to control the Lincstation N2 disk/network activity LEDs via
+  I2C/SMBus, for use on Linux distributions other than the vendor's
+  Unraid-based image.
+vendor: jchonig
+homepage: https://github.com/jchonig/lincstation_leds
+license: GPL-3.0-or-later
+
+contents:
+  # -- binary, all formats --
+  - src: lincstation_leds
+    dst: /usr/sbin/lincstation_leds
+    file_info:
+      mode: 0755
+      owner: root
+      group: root
+
+  # -- systemd unit: deb path --
+  - src: contrib/systemd/lincstation_leds.service
+    dst: /lib/systemd/system/lincstation_leds.service
+    file_info:
+      mode: 0644
+    packager: deb
+
+  # -- systemd unit: rpm path --
+  - src: contrib/systemd/lincstation_leds.service
+    dst: /usr/lib/systemd/system/lincstation_leds.service
+    file_info:
+      mode: 0644
+    packager: rpm
+
+  # -- udev rule: deb path --
+  - src: contrib/udev/60-lincstation_leds.rules
+    dst: /lib/udev/rules.d/60-lincstation_leds.rules
+    file_info:
+      mode: 0644
+    packager: deb
+
+  # -- udev rule: rpm path --
+  - src: contrib/udev/60-lincstation_leds.rules
+    dst: /usr/lib/udev/rules.d/60-lincstation_leds.rules
+    file_info:
+      mode: 0644
+    packager: rpm
+
+  # -- OpenRC init script: apk only (Alpine has no systemd) --
+  - src: contrib/openrc/lincstation_leds.initd
+    dst: /etc/init.d/lincstation_leds
+    file_info:
+      mode: 0755
+    packager: apk
+
+  # -- mdev.conf fragment: apk only, spliced in by the apk postinstall
+  #    script since Alpine's default device manager is mdev, not udev --
+  - src: contrib/mdev/lincstation_leds.mdev.conf
+    dst: /usr/share/lincstation_leds/mdev.conf.fragment
+    file_info:
+      mode: 0644
+    packager: apk
+
+  # -- docs, all formats --
+  - src: LICENSE
+    dst: /usr/share/doc/lincstation_leds/LICENSE
+    file_info:
+      mode: 0644
+  - src: README.md
+    dst: /usr/share/doc/lincstation_leds/README.md
+    file_info:
+      mode: 0644
+
+overrides:
+  deb:
+    depends:
+      - libi2c0
+    scripts:
+      postinstall: contrib/scripts/deb-postinstall.sh
+      preremove: contrib/scripts/deb-preremove.sh
+  rpm:
+    depends:
+      - libi2c
+    scripts:
+      postinstall: contrib/scripts/rpm-postinstall.sh
+      preremove: contrib/scripts/rpm-preremove.sh
+  apk:
+    depends:
+      - i2c-tools
+    scripts:
+      postinstall: contrib/scripts/apk-postinstall.sh
+      preremove: contrib/scripts/apk-preremove.sh
+
+rpm:
+  group: System Environment/Daemons

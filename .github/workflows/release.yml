@@ -1,0 +1,172 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - id: v
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          case "$ver" in
+            *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  # Reuses ci.yml's build + package-and-smoke-test jobs so a release always
+  # ships exactly the bits that were just built and install/smoke-tested.
+  ci:
+    needs: version
+    uses: ./.github/workflows/ci.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  github-release:
+    needs: [version, ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lincstation_leds-deb
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lincstation_leds-rpm
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lincstation_leds-apk
+          merge-multiple: true
+          path: dist
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: lincstation_leds ${{ github.ref_name }}
+          prerelease: ${{ needs.version.outputs.prerelease }}
+          files: dist/*
+
+  # --- Publish signed APT/YUM/APK repos to GitHub Pages (skipped for prereleases) ---
+
+  collect-historical-assets:
+    needs: [version, github-release]
+    if: needs.version.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download every .deb/.rpm/.apk ever released
+        run: |
+          mkdir -p assets/deb assets/rpm assets/apk
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName -q '.[].tagName'); do
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.deb' --dir assets/deb --clobber || true
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.rpm' --dir assets/rpm --clobber || true
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir assets/apk --clobber || true
+          done
+      - uses: actions/upload-artifact@v4
+        with: { name: historical-deb, path: assets/deb, if-no-files-found: ignore }
+      - uses: actions/upload-artifact@v4
+        with: { name: historical-rpm, path: assets/rpm, if-no-files-found: ignore }
+      - uses: actions/upload-artifact@v4
+        with: { name: historical-apk, path: assets/apk, if-no-files-found: ignore }
+
+  build-apt-repo:
+    needs: collect-historical-assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: historical-deb, path: assets/deb }
+      - name: Build APT repo
+        id: apt-repo
+        uses: morph027/apt-repo-action@v3
+        with:
+          repo-name: lincstation_leds
+          scan-dir: assets/deb
+          codename: stable
+          architectures: amd64
+          components: main
+          signing-key: ${{ secrets.GPG_SIGNING_KEY }}
+      - run: mkdir -p public/apt && cp -r "${{ steps.apt-repo.outputs.dir }}/." public/apt/
+      - uses: actions/upload-artifact@v4
+        with: { name: repo-apt, path: public/apt }
+
+  build-yum-repo:
+    needs: collect-historical-assets
+    runs-on: ubuntu-latest
+    container: rockylinux:9
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: historical-rpm, path: assets/rpm }
+      - name: Install repo tooling
+        run: dnf install -y createrepo_c rpm-sign gnupg2
+      - name: Import signing key
+        run: echo "$GPG_SIGNING_KEY" | gpg --batch --import
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+      - name: Sign RPMs and build repodata
+        # Assumes GPG_SIGNING_KEY is a passphrase-less key generated for CI
+        # automation (standard practice here -- the GH secret itself is the
+        # protection boundary), so no passphrase handling is needed.
+        run: |
+          mkdir -p public/yum
+          cp assets/rpm/*.rpm public/yum/
+          fingerprint=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/{print $10; exit}')
+          rpm --define "_gpg_name $fingerprint" --addsign public/yum/*.rpm
+          createrepo_c public/yum/
+          gpg --batch --yes --detach-sign --armor public/yum/repodata/repomd.xml
+          gpg --export --armor "$fingerprint" > public/yum/RPM-GPG-KEY-lincstation_leds
+      - uses: actions/upload-artifact@v4
+        with: { name: repo-yum, path: public/yum }
+
+  build-apk-repo:
+    needs: collect-historical-assets
+    runs-on: ubuntu-latest
+    container: alpine:latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: historical-apk, path: assets/apk }
+      - name: Install signing tooling
+        run: apk add --no-cache alpine-sdk abuild
+      - name: Sign APKINDEX
+        env:
+          ALPINE_SIGNING_KEY: ${{ secrets.ALPINE_SIGNING_KEY }}
+        run: |
+          mkdir -p public/apk/x86_64 ~/.abuild
+          cp assets/apk/*.apk public/apk/x86_64/
+          echo "$ALPINE_SIGNING_KEY" > ~/.abuild/lincstation_leds.rsa
+          chmod 600 ~/.abuild/lincstation_leds.rsa
+          openssl rsa -in ~/.abuild/lincstation_leds.rsa -pubout -out ~/.abuild/lincstation_leds.rsa.pub
+          apk index -o public/apk/x86_64/APKINDEX.tar.gz public/apk/x86_64/*.apk
+          abuild-sign -k ~/.abuild/lincstation_leds.rsa public/apk/x86_64/APKINDEX.tar.gz
+          cp ~/.abuild/lincstation_leds.rsa.pub public/apk/lincstation_leds.rsa.pub
+      - uses: actions/upload-artifact@v4
+        with: { name: repo-apk, path: public/apk }
+
+  deploy-pages:
+    needs: [build-apt-repo, build-yum-repo, build-apk-repo]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: repo-apt, path: public/apt }
+      - uses: actions/download-artifact@v4
+        with: { name: repo-yum, path: public/yum }
+      - uses: actions/download-artifact@v4
+        with: { name: repo-apk, path: public/apk }
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: public

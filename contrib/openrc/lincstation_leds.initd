@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+name="lincstation_leds"
+description="Lincstation N2 LED activity monitor"
+command="/usr/sbin/lincstation_leds"
+command_user="lincstation-leds:lincstation-leds"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+	need localmount
+	after bootmisc
+}

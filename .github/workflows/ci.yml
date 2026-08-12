@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Package version to build (defaults to `git describe` when omitted)'
+        required: false
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: sudo apt-get update && sudo apt-get install -y libi2c-dev
+      - name: Build
+        run: make all
+      - name: Fast test
+        run: make test
+
+  # Each leg compiles its own binary rather than sharing one built centrally:
+  # the deb/rpm legs are glibc but can still skew across distro glibc
+  # versions, and the apk leg is musl entirely, so a binary built elsewhere
+  # would not run there. Compiling a single C file is cheap, so building
+  # fresh per leg is simpler and correct rather than trying to share.
+  package-and-smoke-test:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - fmt: deb
+            container: ''
+          - fmt: rpm
+            container: 'rockylinux:9'
+          - fmt: apk
+            container: 'alpine:latest'
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build/runtime deps (deb)
+        if: matrix.fmt == 'deb'
+        run: sudo apt-get update && sudo apt-get install -y libi2c-dev curl make
+
+      - name: Install build/runtime deps (rpm)
+        if: matrix.fmt == 'rpm'
+        run: |
+          dnf install -y dnf-plugins-core
+          dnf config-manager --set-enabled crb
+          dnf install -y libi2c-devel gcc make tar findutils systemd
+
+      - name: Install build/runtime deps (apk)
+        if: matrix.fmt == 'apk'
+        run: apk add --no-cache i2c-tools-dev linux-headers gcc musl-dev make curl tar coreutils
+
+      - name: Install nfpm
+        run: ${{ matrix.fmt == 'deb' && 'sudo' || '' }} contrib/scripts/install-nfpm.sh
+
+      - name: Compute version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Package + install + smoke test (deb)
+        if: matrix.fmt == 'deb'
+        run: sudo make package-test-deb VERSION="$VERSION"
+      - name: Package + install + smoke test (rpm)
+        if: matrix.fmt == 'rpm'
+        run: make package-test-rpm VERSION="$VERSION"
+      - name: Package + install + smoke test (apk)
+        if: matrix.fmt == 'apk'
+        run: make package-test-apk VERSION="$VERSION"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lincstation_leds-${{ matrix.fmt }}
+          path: |
+            lincstation_leds*.deb
+            lincstation_leds*.rpm
+            lincstation_leds*.apk
+          if-no-files-found: ignore
