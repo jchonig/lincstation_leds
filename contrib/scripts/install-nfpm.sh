@@ -12,9 +12,9 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 if command -v curl >/dev/null 2>&1; then
-    curl -sSfL "$URL" -o "$TMPDIR/nfpm.tar.gz"
+    curl -sSfL --retry 5 --retry-all-errors --retry-delay 2 "$URL" -o "$TMPDIR/nfpm.tar.gz"
 elif command -v wget >/dev/null 2>&1; then
-    wget -q -O "$TMPDIR/nfpm.tar.gz" "$URL"
+    wget -q --tries=5 --waitretry=2 -O "$TMPDIR/nfpm.tar.gz" "$URL"
 else
     echo "install-nfpm.sh: need curl or wget" >&2
     exit 1
