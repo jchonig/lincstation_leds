@@ -40,8 +40,10 @@ Prebuilt `.deb` (Debian/Ubuntu), `.rpm` (Fedora/RHEL/Rocky/Alma), and `.apk`
 a systemd unit (deb/rpm) or OpenRC init script (apk) plus the udev/mdev rules
 needed to grant a dedicated `lincstation-leds` system user access to the I2C
 device. See the [Releases](https://github.com/jchonig/lincstation_leds/releases)
-page, or the GitHub Pages-hosted APT/YUM/APK repositories for direct
-`apt install` / `dnf install` / `apk add` access.
+page for individual package downloads, or
+**[jchonig.github.io/lincstation_leds](https://jchonig.github.io/lincstation_leds/)**
+for the hosted APT/YUM/APK repositories with copy-pasteable
+`apt install` / `dnf install` / `apk add` setup instructions per distro.
 
 ## Development
 

@@ -169,6 +169,74 @@ jobs:
         with: { name: repo-yum, path: public/yum }
       - uses: actions/download-artifact@v4
         with: { name: repo-apk, path: public/apk }
+      # peaceiris/actions-gh-pages replaces the whole gh-pages branch
+      # contents with publish_dir on every deploy, so the landing page has
+      # to be regenerated here each release rather than committed once by
+      # hand -- otherwise the next release would silently wipe it.
+      - name: Generate index page
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          owner="${REPO%%/*}"
+          name="${REPO#*/}"
+          base="https://${owner}.github.io/${name}"
+          cat > public/index.html <<HTML
+          <!doctype html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>lincstation_leds packages</title>
+          <style>
+            :root { color-scheme: light dark; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                   max-width: 46rem; margin: 2.5rem auto; padding: 0 1.25rem; line-height: 1.5; }
+            h1 { font-size: 1.4rem; }
+            h2 { font-size: 1.1rem; margin-top: 2.2rem; border-bottom: 1px solid #8884; padding-bottom: .3rem; }
+            pre { background: #80808018; border: 1px solid #8884; border-radius: 6px;
+                  padding: .75rem 1rem; overflow-x: auto; font-size: .85rem; }
+            code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+            a { color: inherit; }
+            footer { margin-top: 3rem; font-size: .85rem; opacity: .7; }
+          </style>
+          </head>
+          <body>
+          <h1>lincstation_leds packages</h1>
+          <p>Prebuilt <code>.deb</code>, <code>.rpm</code>, and <code>.apk</code> packages for
+          <a href="https://github.com/${REPO}">${REPO}</a>, a daemon that drives the Lincstation N2's
+          disk/network activity LEDs. Each package installs a dedicated <code>lincstation-leds</code>
+          system user and a systemd unit (deb/rpm) or OpenRC service (apk) that starts automatically.</p>
+
+          <h2>Debian / Ubuntu (APT)</h2>
+          <pre><code>curl -fsSL ${base}/apt/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/lincstation-leds.gpg
+          echo "deb [signed-by=/usr/share/keyrings/lincstation-leds.gpg] ${base}/apt stable main" \
+              | sudo tee /etc/apt/sources.list.d/lincstation-leds.list
+          sudo apt update
+          sudo apt install lincstation-leds</code></pre>
+
+          <h2>Fedora / RHEL / Rocky / Alma (DNF/YUM)</h2>
+          <pre><code>sudo tee /etc/yum.repos.d/lincstation-leds.repo &lt;&lt;REPO
+          [lincstation-leds]
+          name=lincstation_leds
+          baseurl=${base}/yum/
+          enabled=1
+          gpgcheck=1
+          gpgkey=${base}/yum/RPM-GPG-KEY-lincstation_leds
+          REPO
+          sudo dnf install lincstation-leds</code></pre>
+
+          <h2>Alpine (APK)</h2>
+          <pre><code>wget -O /etc/apk/keys/lincstation_leds.rsa.pub ${base}/apk/lincstation_leds.rsa.pub
+          echo "${base}/apk" | sudo tee -a /etc/apk/repositories
+          sudo apk update
+          sudo apk add lincstation-leds</code></pre>
+
+          <footer>Built and published automatically by
+          <a href="https://github.com/${REPO}/blob/main/.github/workflows/release.yml">release.yml</a>
+          on tagged releases. Source: <a href="https://github.com/${REPO}">${REPO}</a>.</footer>
+          </body>
+          </html>
+          HTML
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
