@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install build deps
         run: sudo apt-get update && sudo apt-get install -y libi2c-dev
       - name: Build
@@ -45,6 +47,8 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build/runtime deps (deb)
         if: matrix.fmt == 'deb'
@@ -65,12 +69,28 @@ jobs:
         run: ${{ matrix.fmt == 'deb' && 'sudo' || '' }} contrib/scripts/install-nfpm.sh
 
       - name: Compute version
+        # actions/checkout defaults to a shallow, tag-less fetch, so on an
+        # ordinary push (not the tag-triggered release path, which always
+        # supplies inputs.version directly) `git describe --tags` usually
+        # can't see any tag at all and falls back to a bare commit hash --
+        # which isn't a valid dpkg version (must start with a digit) and
+        # would also break rpm if a real describe suffix ever contained a
+        # "-" (rpm's Version field disallows it). Sanitize unconditionally:
+        # strip a leading v, turn any "-" into "+", and prefix "0.0.0+" if
+        # the result still doesn't start with a digit.
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+            ver="${{ inputs.version }}"
           else
-            echo "VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)" >> "$GITHUB_ENV"
+            raw=$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)
+            ver="${raw#v}"
+            ver="${ver//-/+}"
+            case "$ver" in
+              [0-9]*) : ;;
+              *) ver="0.0.0+$ver" ;;
+            esac
           fi
+          echo "VERSION=$ver" >> "$GITHUB_ENV"
 
       - name: Package + install + smoke test (deb)
         if: matrix.fmt == 'deb'
