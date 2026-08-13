@@ -149,12 +149,26 @@ jobs:
         with: { name: historical-apk, path: assets/apk }
       - name: Install signing tooling
         run: apk add --no-cache alpine-sdk abuild
+      - name: Rename packages to Alpine's <name>-<version>.apk convention
+        # nfpm names its apk output <name>_<version>_<arch>.apk, but `apk`
+        # constructs each download URL from the index's P:/V: fields as
+        # <name>-<version>.apk (no arch suffix) -- copying nfpm's filenames
+        # in verbatim 404s at install time even though the index looks
+        # correct. Derive the true name/version from each package's own
+        # embedded .PKGINFO rather than parsing the filename, since that's
+        # correct regardless of how nfpm happens to name things.
+        run: |
+          mkdir -p public/apk/x86_64
+          for f in assets/apk/*.apk; do
+            name=$(tar -xzO -f "$f" .PKGINFO | awk -F' = ' '/^pkgname/{print $2}')
+            ver=$(tar -xzO -f "$f" .PKGINFO | awk -F' = ' '/^pkgver/{print $2}')
+            cp "$f" "public/apk/x86_64/${name}-${ver}.apk"
+          done
       - name: Sign APKINDEX
         env:
           ALPINE_SIGNING_KEY: ${{ secrets.ALPINE_SIGNING_KEY }}
         run: |
-          mkdir -p public/apk/x86_64 ~/.abuild
-          cp assets/apk/*.apk public/apk/x86_64/
+          mkdir -p ~/.abuild
           echo "$ALPINE_SIGNING_KEY" > ~/.abuild/lincstation_leds.rsa
           chmod 600 ~/.abuild/lincstation_leds.rsa
           openssl rsa -in ~/.abuild/lincstation_leds.rsa -pubout -out ~/.abuild/lincstation_leds.rsa.pub
