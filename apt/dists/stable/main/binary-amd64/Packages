@@ -1,4 +1,23 @@
 Package: lincstation-leds
+Version: 0.9.5
+Architecture: amd64
+Maintainer: Jeffrey C Honig <jch@honig.net>
+Installed-Size: 62
+Depends: libi2c0
+Homepage: https://github.com/jchonig/lincstation_leds
+Priority: optional
+Section: admin
+Filename: pool/main/l/lincstation-leds/lincstation-leds_0.9.5_amd64.deb
+Size: 24792
+SHA512: e9539c4b294409a33e0ce4084853e2d7d947a4bf2804e2ea917e8a7f206f09d52b9c26d948434ca432c55d25524c4c710885b6d032a07814204fd12f62db7376
+SHA256: e4536cef1750395f2e1f89fc37f7df2fd31f009ebc95d86dd568ad30fd3fb730
+SHA1: a9df9efc69d3de3d640aab066ee03f99e0dd7a46
+MD5sum: 51e3bf2eef1e218e6b853c383ceb82c5
+Description: Daemon to control the Lincstation N2 disk/network activity LEDs via
+ I2C/SMBus, for use on Linux distributions other than the vendor's
+ Unraid-based image.
+
+Package: lincstation-leds
 Version: 0.9.4
 Architecture: amd64
 Maintainer: Jeffrey C Honig <jch@honig.net>
