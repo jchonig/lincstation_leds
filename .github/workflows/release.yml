@@ -100,6 +100,15 @@ jobs:
           components: main
           signing-key: ${{ secrets.GPG_SIGNING_KEY }}
       - run: mkdir -p public/apt && cp -r "${{ steps.apt-repo.outputs.dir }}/." public/apt/
+      - name: Publish correctly-named/formatted key files
+        # morph027/apt-repo-action names its output "gpg.key", which is
+        # ASCII-armored but doesn't carry the .asc extension tools like
+        # puppetlabs-apt's apt::key infer key format from -- .key matches
+        # neither its "binary must be .gpg" nor "armored must be .asc"
+        # convention. Publish both properly-named/formatted forms instead.
+        run: |
+          cp public/apt/gpg.key public/apt/lincstation-leds.asc
+          gpg --dearmor < public/apt/gpg.key > public/apt/lincstation-leds.gpg
       - uses: actions/upload-artifact@v4
         with: { name: repo-apt, path: public/apt }
 
@@ -208,11 +217,15 @@ jobs:
           system user and a systemd unit (deb/rpm) or OpenRC service (apk) that starts automatically.</p>
 
           <h2>Debian / Ubuntu (APT)</h2>
-          <pre><code>curl -fsSL ${base}/apt/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/lincstation-leds.gpg
+          <pre><code>curl -fsSL ${base}/apt/lincstation-leds.gpg -o /usr/share/keyrings/lincstation-leds.gpg
           echo "deb [signed-by=/usr/share/keyrings/lincstation-leds.gpg] ${base}/apt stable main" \
               | sudo tee /etc/apt/sources.list.d/lincstation-leds.list
           sudo apt update
           sudo apt install lincstation-leds</code></pre>
+          <p>The key is also published ASCII-armored at
+          <code>${base}/apt/lincstation-leds.asc</code> for tools (Puppet's
+          <code>apt::key</code>, Ansible, Chef, etc.) that infer key format from the
+          file extension rather than always wanting the binary <code>.gpg</code> form.</p>
 
           <h2>Fedora / RHEL / Rocky / Alma (DNF/YUM)</h2>
           <pre><code>sudo tee /etc/yum.repos.d/lincstation-leds.repo &lt;&lt;REPO
