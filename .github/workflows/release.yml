@@ -269,3 +269,44 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: public
+
+  # Installs from the REAL published repos (real signature verification,
+  # real index files) rather than a locally-built file -- this is the only
+  # thing that catches bugs in what actually got published, like an
+  # index/filename mismatch or a key-format issue that a build-time
+  # smoketest of a local file can't see.
+  verify-published-repos:
+    needs: deploy-pages
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - fmt: deb
+            container: ''
+          - fmt: rpm
+            container: 'rockylinux:9'
+          - fmt: apk
+            container: 'alpine:latest'
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute Pages base URL
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          owner="${REPO%%/*}"
+          name="${REPO#*/}"
+          echo "PAGES_BASE=https://${owner}.github.io/${name}" >> "$GITHUB_ENV"
+      - name: Install curl (apk only -- not present in the base image)
+        if: matrix.fmt == 'apk'
+        run: apk add --no-cache curl
+      - name: Verify install from the real published repo (deb)
+        if: matrix.fmt == 'deb'
+        run: sudo PAGES_BASE="$PAGES_BASE" contrib/scripts/verify-published-repo.sh deb
+      - name: Verify install from the real published repo (rpm)
+        if: matrix.fmt == 'rpm'
+        run: contrib/scripts/verify-published-repo.sh rpm
+      - name: Verify install from the real published repo (apk)
+        if: matrix.fmt == 'apk'
+        run: contrib/scripts/verify-published-repo.sh apk
