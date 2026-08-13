@@ -25,10 +25,14 @@ disk/network activity LEDs. Each package installs a dedicated <code>lincstation-
 system user and a systemd unit (deb/rpm) or OpenRC service (apk) that starts automatically.</p>
 
 <h2>Debian / Ubuntu (APT)</h2>
-<pre><code>curl -fsSL https://jchonig.github.io/lincstation_leds/apt/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/lincstation-leds.gpg
+<pre><code>curl -fsSL https://jchonig.github.io/lincstation_leds/apt/lincstation-leds.gpg -o /usr/share/keyrings/lincstation-leds.gpg
 echo "deb [signed-by=/usr/share/keyrings/lincstation-leds.gpg] https://jchonig.github.io/lincstation_leds/apt stable main"     | sudo tee /etc/apt/sources.list.d/lincstation-leds.list
 sudo apt update
 sudo apt install lincstation-leds</code></pre>
+<p>The key is also published ASCII-armored at
+<code>https://jchonig.github.io/lincstation_leds/apt/lincstation-leds.asc</code> for tools (Puppet's
+<code>apt::key</code>, Ansible, Chef, etc.) that infer key format from the
+file extension rather than always wanting the binary <code>.gpg</code> form.</p>
 
 <h2>Fedora / RHEL / Rocky / Alma (DNF/YUM)</h2>
 <pre><code>sudo tee /etc/yum.repos.d/lincstation-leds.repo &lt;&lt;REPO
